@@ -16,6 +16,7 @@ const PIECE_ICONS = {
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8];
 const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20_000 };
+const SELF_CAPTURE_TRANSFORM = { p: "n", n: "b", b: "r", r: "q" };
 
 const HUMAN_COLOR = "w";
 const COMPUTER_COLOR = "b";
@@ -89,6 +90,21 @@ function typeOf(piece) {
 
 function inBounds(x, y) {
   return x >= 0 && x < 8 && y >= 0 && y < 8;
+}
+
+function canSelfCaptureAndTransform(movingPiece, targetPiece) {
+  if (!movingPiece || !targetPiece) return false;
+  const sameColor = colorOf(movingPiece) === colorOf(targetPiece);
+  const movingType = typeOf(movingPiece);
+  const targetType = typeOf(targetPiece);
+  return sameColor && movingType === targetType && Boolean(SELF_CAPTURE_TRANSFORM[movingType]);
+}
+
+function canLandOnSquare(movingPiece, targetPiece) {
+  if (!movingPiece) return false;
+  if (!targetPiece) return true;
+  if (colorOf(targetPiece) !== colorOf(movingPiece)) return true;
+  return canSelfCaptureAndTransform(movingPiece, targetPiece);
 }
 
 function isSquareAttacked(square, byColor, customState = state) {
@@ -182,7 +198,7 @@ function pseudoMovesFrom(square, customState = state) {
       const cy = y + dir;
       if (!inBounds(cx, cy)) continue;
       const target = customState.board[cy][cx];
-      if (target && colorOf(target) !== color) moves.push(coordsToSquare(cx, cy));
+      if (target && canLandOnSquare(piece, target)) moves.push(coordsToSquare(cx, cy));
       if (customState.enPassant === coordsToSquare(cx, cy)) moves.push(coordsToSquare(cx, cy));
     }
     return moves;
@@ -198,7 +214,7 @@ function pseudoMovesFrom(square, customState = state) {
       const cy = y + dy;
       if (!inBounds(cx, cy)) continue;
       const target = customState.board[cy][cx];
-      if (!target || colorOf(target) !== color) moves.push(coordsToSquare(cx, cy));
+      if (canLandOnSquare(piece, target)) moves.push(coordsToSquare(cx, cy));
     }
     return moves;
   }
@@ -211,7 +227,7 @@ function pseudoMovesFrom(square, customState = state) {
         const cy = y + dy;
         if (!inBounds(cx, cy)) continue;
         const target = customState.board[cy][cx];
-        if (!target || colorOf(target) !== color) moves.push(coordsToSquare(cx, cy));
+        if (canLandOnSquare(piece, target)) moves.push(coordsToSquare(cx, cy));
       }
     }
 
@@ -254,7 +270,7 @@ function pseudoMovesFrom(square, customState = state) {
       if (!target) {
         moves.push(coordsToSquare(cx, cy));
       } else {
-        if (colorOf(target) !== color) moves.push(coordsToSquare(cx, cy));
+        if (canLandOnSquare(piece, target)) moves.push(coordsToSquare(cx, cy));
         break;
       }
       cx += dx;
@@ -327,6 +343,10 @@ function applyMove(localState, from, to) {
   if (target === "br" && to === "h8") next.castling.bK = false;
 
   let placed = moving;
+  if (canSelfCaptureAndTransform(moving, target)) {
+    placed = `${color}${SELF_CAPTURE_TRANSFORM[type]}`;
+  }
+
   if (type === "p") {
     const { y: ty } = squareToCoords(to);
     if ((color === "w" && ty === 7) || (color === "b" && ty === 0)) {
