@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Шахматы в браузере</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <h1>Шахматы</h1>
+        <p class="hint">Кликните на фигуру, затем на целевую клетку. Новое правило: можно бить свою фигуру того же вида с превращением (пешка→конь→слон→ладья→ферзь).</p>
+        <div id="status" class="status">Загрузка…</div>
+        <div class="controls">
+          <button id="new-game" type="button">Новая партия</button>
+          <button id="undo" type="button">Отменить ход</button>
+        </div>
+      </section>
+      <section>
+        <div id="board" class="board" aria-label="Шахматная доска"></div>
+      </section>
+    </main>
+  </body>
+</html>
