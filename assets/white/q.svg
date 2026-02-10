@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128' role='img' aria-label='chess q'>
+  <defs>
+    <linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fbfdff'/><stop offset='1' stop-color='#e2edf6'/></linearGradient>
+  </defs>
+  <style>:root{--stroke:#8fb0ca;--head:#edf4fa;--gem:#ffffff;--slash:#ffffff;--eye:#8da7bb;}</style>
+  <ellipse cx='64' cy='112' rx='34' ry='10' fill='#eef2f6'/>
+  <ellipse cx='64' cy='102' rx='30' ry='12' fill='#bfd3e3'/>
+  <path d='M46 100c3-10 7-28 8-44h20c1 16 5 34 8 44z' fill='url(#g)' stroke='var(--stroke)' stroke-width='2.2'/>
+  <ellipse cx='64' cy='98' rx='20' ry='7' fill='#dceaf4'/>
+  <path d='M40 56l8-18 16 8 16-8 8 18-6 6H46z' fill='var(--head)' stroke='var(--stroke)' stroke-width='2.2'/>
+  <circle cx='48' cy='38' r='4' fill='var(--gem)'/><circle cx='64' cy='42' r='4' fill='var(--gem)'/><circle cx='80' cy='38' r='4' fill='var(--gem)'/>
+  <ellipse cx='56' cy='75' rx='4' ry='11' fill='#ffffff' opacity='.72'/>
+</svg>
