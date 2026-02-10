@@ -15,6 +15,10 @@ const PIECE_ICONS = {
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = [1, 2, 3, 4, 5, 6, 7, 8];
+const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20_000 };
+
+const HUMAN_COLOR = "w";
+const COMPUTER_COLOR = "b";
 
 const boardEl = document.getElementById("board");
 const statusEl = document.getElementById("status");
@@ -23,6 +27,7 @@ const undoBtn = document.getElementById("undo");
 
 let selectedSquare = null;
 let legalTargets = [];
+let isComputerThinking = false;
 
 const history = [];
 
@@ -51,8 +56,6 @@ function initialBoard() {
   ];
 }
 
-let state = createInitialState();
-
 function createInitialState() {
   return {
     board: initialBoard(),
@@ -63,6 +66,8 @@ function createInitialState() {
     fullMove: 1,
   };
 }
+
+let state = createInitialState();
 
 function getPiece(square, customState = state) {
   const { x, y } = squareToCoords(square);
@@ -177,12 +182,8 @@ function pseudoMovesFrom(square, customState = state) {
       const cy = y + dir;
       if (!inBounds(cx, cy)) continue;
       const target = customState.board[cy][cx];
-      if (target && colorOf(target) !== color) {
-        moves.push(coordsToSquare(cx, cy));
-      }
-      if (customState.enPassant === coordsToSquare(cx, cy)) {
-        moves.push(coordsToSquare(cx, cy));
-      }
+      if (target && colorOf(target) !== color) moves.push(coordsToSquare(cx, cy));
+      if (customState.enPassant === coordsToSquare(cx, cy)) moves.push(coordsToSquare(cx, cy));
     }
     return moves;
   }
@@ -362,15 +363,102 @@ function allLegalMoves(color = state.turn, customState = state) {
   const moves = [];
   for (const rank of RANKS) {
     for (const file of FILES) {
-      const sq = `${file}${rank}`;
-      const piece = getPiece(sq, customState);
+      const from = `${file}${rank}`;
+      const piece = getPiece(from, customState);
       if (!piece || colorOf(piece) !== color) continue;
-      for (const to of legalMovesFrom(sq, { ...customState, turn: color })) {
-        moves.push({ from: sq, to });
+      for (const to of legalMovesFrom(from, { ...customState, turn: color })) {
+        moves.push({ from, to });
       }
     }
   }
   return moves;
+}
+
+function getGameResult(customState = state) {
+  const legal = allLegalMoves(customState.turn, customState);
+  const checked = isCheck(customState.turn, customState);
+  if (legal.length === 0 && checked) {
+    return customState.turn === "w" ? "black_win" : "white_win";
+  }
+  if (legal.length === 0) return "stalemate";
+  if (customState.halfMove >= 100) return "draw_50";
+  return "ongoing";
+}
+
+function evaluatePosition(customState) {
+  const result = getGameResult(customState);
+  if (result === "black_win") return 100000;
+  if (result === "white_win") return -100000;
+  if (result === "stalemate" || result === "draw_50") return 0;
+
+  let score = 0;
+  for (let y = 0; y < 8; y += 1) {
+    for (let x = 0; x < 8; x += 1) {
+      const piece = customState.board[y][x];
+      if (!piece) continue;
+      const value = PIECE_VALUES[typeOf(piece)] ?? 0;
+      score += colorOf(piece) === "b" ? value : -value;
+    }
+  }
+
+  if (isCheck("w", customState)) score += 20;
+  if (isCheck("b", customState)) score -= 20;
+
+  return score;
+}
+
+function minimax(customState, depth, alpha, beta, maximizing) {
+  const result = getGameResult(customState);
+  if (depth === 0 || result !== "ongoing") {
+    return evaluatePosition(customState);
+  }
+
+  const color = maximizing ? "b" : "w";
+  const moves = allLegalMoves(color, { ...customState, turn: color });
+  if (moves.length === 0) return evaluatePosition({ ...customState, turn: color });
+
+  if (maximizing) {
+    let best = -Infinity;
+    for (const mv of moves) {
+      const next = applyMove({ ...customState, turn: color }, mv.from, mv.to);
+      const val = minimax(next, depth - 1, alpha, beta, false);
+      best = Math.max(best, val);
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+
+  let best = Infinity;
+  for (const mv of moves) {
+    const next = applyMove({ ...customState, turn: color }, mv.from, mv.to);
+    const val = minimax(next, depth - 1, alpha, beta, true);
+    best = Math.min(best, val);
+    beta = Math.min(beta, val);
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+
+function pickComputerMove() {
+  const moves = allLegalMoves(COMPUTER_COLOR, { ...state, turn: COMPUTER_COLOR });
+  if (!moves.length) return null;
+
+  let bestScore = -Infinity;
+  let bestMoves = [];
+
+  for (const mv of moves) {
+    const next = applyMove({ ...state, turn: COMPUTER_COLOR }, mv.from, mv.to);
+    const score = minimax(next, 1, -Infinity, Infinity, false);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [mv];
+    } else if (score === bestScore) {
+      bestMoves.push(mv);
+    }
+  }
+
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)] ?? null;
 }
 
 function move(from, to) {
@@ -381,10 +469,25 @@ function move(from, to) {
   return true;
 }
 
-function undo() {
+function undoTurn() {
   const prev = history.pop();
   if (!prev) return;
   state = JSON.parse(prev);
+}
+
+function maybeComputerTurn() {
+  if (state.turn !== COMPUTER_COLOR) return;
+  if (getGameResult(state) !== "ongoing") return;
+
+  isComputerThinking = true;
+  updateStatus();
+
+  setTimeout(() => {
+    const best = pickComputerMove();
+    if (best) move(best.from, best.to);
+    isComputerThinking = false;
+    renderBoard();
+  }, 250);
 }
 
 function createBoard() {
@@ -442,27 +545,37 @@ function renderBoard() {
 }
 
 function updateStatus() {
-  const side = state.turn === "w" ? "Белые" : "Чёрные";
-  const legal = allLegalMoves(state.turn);
-  const checked = isCheck(state.turn);
-
-  if (legal.length === 0 && checked) {
-    statusEl.textContent = `Мат! Победили ${state.turn === "w" ? "чёрные" : "белые"}.`;
+  if (isComputerThinking) {
+    statusEl.textContent = "Компьютер думает…";
     return;
   }
-  if (legal.length === 0) {
+
+  const result = getGameResult(state);
+  if (result === "white_win") {
+    statusEl.textContent = "Мат! Победили белые.";
+    return;
+  }
+  if (result === "black_win") {
+    statusEl.textContent = "Мат! Победили чёрные.";
+    return;
+  }
+  if (result === "stalemate") {
     statusEl.textContent = "Пат. Ничья.";
     return;
   }
-  if (state.halfMove >= 100) {
+  if (result === "draw_50") {
     statusEl.textContent = "Ничья по правилу 50 ходов.";
     return;
   }
 
-  statusEl.textContent = `${side} ходят${checked ? ", шах." : "."}`;
+  const side = state.turn === "w" ? "Белые" : "Чёрные";
+  const computerHint = state.turn === COMPUTER_COLOR ? " (компьютер)" : " (вы)";
+  statusEl.textContent = `${side}${computerHint} ходят${isCheck(state.turn, state) ? ", шах." : "."}`;
 }
 
 function onSquareClick(event) {
+  if (state.turn !== HUMAN_COLOR || isComputerThinking) return;
+
   const square = event.currentTarget.dataset.square;
 
   if (selectedSquare && legalTargets.includes(square)) {
@@ -470,6 +583,7 @@ function onSquareClick(event) {
     selectedSquare = null;
     legalTargets = [];
     renderBoard();
+    maybeComputerTurn();
     return;
   }
 
@@ -489,11 +603,18 @@ newGameBtn.addEventListener("click", () => {
   history.length = 0;
   selectedSquare = null;
   legalTargets = [];
+  isComputerThinking = false;
   renderBoard();
+  maybeComputerTurn();
 });
 
 undoBtn.addEventListener("click", () => {
-  undo();
+  if (isComputerThinking) return;
+
+  // В режиме против компьютера откатываем пару полуходов, чтобы снова ходил человек.
+  undoTurn();
+  if (state.turn !== HUMAN_COLOR) undoTurn();
+
   selectedSquare = null;
   legalTargets = [];
   renderBoard();
@@ -501,3 +622,4 @@ undoBtn.addEventListener("click", () => {
 
 createBoard();
 renderBoard();
+maybeComputerTurn();
