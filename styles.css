@@ -1,0 +1,142 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f4f2ef;
+  --panel: #ffffff;
+  --text: #151515;
+  --light-square: #f0d9b5;
+  --dark-square: #b58863;
+  --selected: #4fc3f7;
+  --legal: #66bb6a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.app {
+  width: min(100%, 980px);
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 280px minmax(300px, 1fr);
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
+}
+
+h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.hint {
+  margin-top: 0;
+  color: #555;
+}
+
+.status {
+  margin: 1rem 0;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 1px solid #bdbdbd;
+  background: #f9f9f9;
+  color: #222;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #efefef;
+}
+
+.board {
+  width: min(88vw, 640px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border: 8px solid #5a4430;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.square {
+  display: grid;
+  place-items: center;
+  font-size: clamp(28px, 5.2vw, 52px);
+  user-select: none;
+  position: relative;
+}
+
+.square.light {
+  background: var(--light-square);
+}
+
+.square.dark {
+  background: var(--dark-square);
+}
+
+.square.selected {
+  outline: 4px solid var(--selected);
+  z-index: 1;
+}
+
+.square.legal::after {
+  content: "";
+  width: 26%;
+  height: 26%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--legal) 78%, transparent);
+}
+
+.coord {
+  position: absolute;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.58);
+  pointer-events: none;
+}
+
+.coord.file {
+  right: 4px;
+  bottom: 2px;
+}
+
+.coord.rank {
+  left: 4px;
+  top: 2px;
+}
+
+@media (max-width: 860px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    order: 2;
+  }
+}
