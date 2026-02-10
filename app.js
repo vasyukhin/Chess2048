@@ -548,13 +548,14 @@ function renderBoard() {
       const squareEl = boardEl.querySelector(`[data-square="${squareName}"]`);
       if (!squareEl) continue;
 
-      squareEl.childNodes.forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE) squareEl.removeChild(node);
-      });
+      squareEl.querySelectorAll(".piece").forEach((pieceEl) => pieceEl.remove());
 
       const piece = getPiece(squareName);
       if (piece) {
-        squareEl.insertBefore(document.createTextNode(PIECE_ICONS[piece]), squareEl.firstChild);
+        const pieceEl = document.createElement("span");
+        pieceEl.className = `piece ${piece[0] === "w" ? "white" : "black"}`;
+        pieceEl.textContent = PIECE_ICONS[piece];
+        squareEl.insertBefore(pieceEl, squareEl.firstChild);
       }
 
       squareEl.classList.toggle("selected", squareName === selectedSquare);
